@@ -1,0 +1,328 @@
+---
+title: "The distribution of amino acid changes in different species"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+<style type="text/css">
+
+body{ /* Normal  */
+      font-size: 14px;
+  }
+td {  /* Table  */
+  font-size: 15px;
+}
+h1.title {
+  font-size: 35px;
+  color: Orange; /*RoyalBlue*/
+}
+h1 { /* Header 1 */
+  font-size: 25px;
+  color: Yellow;
+}
+h2 { /* Header 2 */
+    font-size: 22px;
+  color: SteelBlue;
+}
+</style>
+```{r, include = FALSE}
+  # ioslides_presentation:
+  #   widescreen: true
+  #   smaller: true
+```
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(echo = FALSE, cache = T)
+```
+
+#Introduction
+
+## What is RNA editing?
+
+RNA editing is a process that changes a RNA transcript such that it would no longer correspond to a sequence of DNA in a genome. A-to-I RNA editing is widespread in animals and results in the modification of a adenosine to inosine which will be read as a guanine. A-to-I editing in messenger RNA (mRNA) can cause changes in the amino acid sequence of a protein (amino acid recoding). It was recently discovered that RNA editing and amino acid changes are widespread in cephalopods (octopus and squid). Article: Trade-off between Transcriptome Plasticity and Genome Evolution in Cephalopods, Cell  169, 191–202 (2017).
+
+(RNA is a copy of one specific part of DNA, but after being created it can still be changed in a way that the DNA did not program it. There can be many types of changes. We are looking at the one where nucleotide A changes to nucleotide G, which changes the codon. Codons (64 combinations in total) are codes for specific amino acids. (one amino acids can relate to more than one codon). Nucleotides are being changed by enzymes that catalyze the editing.)
+
+![Codons](aminoacids.png)
+
+![Amino acids](Amino_acids.png)
+
+Description of the data:
+
+The data set consists of calculated expected distribution ("Expected amount", "Expected frequency") and observed distribution ("edits", "frequency") of amino acid changes in humans, four cephalopod species, and conserved edits from those species.
+
+KR = represents a change from amino acid K to amino acid R
+syn = synonymous, without any changes to amino acid, likely doesn't have an effect
+stop_W = stop to w, causes a significant change in a protein sequence
+
+Types of amino acid changes:
+
+- All types of amino acids are categorized as either radical or conserved
+- Radical changes are those that change the physicochemical property of the amino acid while conservative changes do not.
+
+The ratio of radical to conservative changes indicates how many changes are likely to have a negative effect.
+
+![Amino acid changes: R-radical,C-conserved](changes.png)
+
+Amino acid changes also can be random or non-random:
+- Random edits = likely to be slightly bad = doesn't make an animal better
+- Non-random edits = likely to be good = likely to be actively preserved in the population = seen more in conserved
+
+In humans most changes are random, therefore, they are most likely to have a negative effect. In Individual cephalopod species, amino acid changes are a lot less random and they are less likely to have a negative effect. In conserved, changes are least random (assumption) and most likely to have a positive effect.
+1. Human vs. individual ocean species
+2. Individual cephalopod species vs. conserved
+
+
+## Data
+```{r}
+#Tidying data, Creating relational data
+library(dplyr)
+library(readxl)
+file_names <- excel_sheets("Data/editing%20codon%20simplified-2.xlsx")
+
+df_list <- list()
+for(i in 1:length(file_names)){
+  df_temp <- read_excel("Data/editingcodonsimplified.xlsx", 
+                             sheet = file_names[i])
+
+  df_temp <- df_temp %>%
+    mutate(sp_name = file_names[i])
+  df_list[[i]] <- df_temp
+}
+
+df <- bind_rows(df_list)
+
+df <- df %>% mutate(Type = ifelse(Change %in% c("NS", "HR", "IV", "MV", "TA", "IM", "SG", "KR", "syn"), "CONSERVED", "RADICAL"))
+
+```
+```{r}
+#install.packages("kableExtra")
+library(knitr)
+library(kableExtra)
+kable(df, "html") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
+  scroll_box(width = "100%", height = "500px")
+```
+
+```{r}
+#cephalopod <- df[df$sp_name %in% c('human','conserved_cephalopods')]
+#cephalopod
+#rm(list= ls()[!(ls() %in% c('keepThis','andThis'))])
+
+```
+
+#Visualization and Exploration
+
+## Expected frequency vs. actual frequency
+
+```{r}
+library(ggplot2)
+ggplot(data = df) +
+  geom_point(mapping = aes(x = Expected_frequency, y = frequency, color = Change)) +
+  facet_wrap(~sp_name, ncol=3) +
+  coord_fixed() +
+  ggtitle("Expected frequency vs. actual frequency")
+
+#+ scale_color_gradient(low="blue", high="red")
+```
+
+## The comparison of frequencies of changes in all species
+
+With this plot we are trying to explore the amino acid changes that are 
+1) the most different in all of species and the most similar. 
+2) how and why are they different or similar?
+3) And what is the general pattern?
+
+
+```{r}
+library(ggplot2)
+ggplot(data = df) +
+    geom_point(mapping = aes(x = frequency, y = Change, color = sp_name)) 
+```
+
+```{r}
+library(ggplot2)
+ggplot(data = df) +
+    geom_point(mapping = aes(x = frequency, y = Change, color = sp_name)) +
+  facet_wrap(~sp_name, ncol=3)
+```
+
+
+First observation:
+
+Humans have a different pattern from each one of cephalopod species, but cephalopod species together have a similar pattern which means that this amino acid preference is connected to cephalopod species being special.
+
+```{r}
+library(ggplot2)
+df_cephalopod <- filter(df, sp_name != 'human', sp_name != 'conserved_cephalopods')
+ggplot(data = df_cephalopod) +
+    geom_point(mapping = aes(x = frequency, y = Change, color = sp_name)) 
+```
+
+Second observation:
+
+EG, TA, KE changes in human are most different and therefore are more likely to have a negative effect.
+As well contributed to cephalopod species being special.
+
+If we check these three changes, it turns out:
+EG, KE are radical changes and TA is conserved.
+
+## The comparison of amount of changes in cephalopod species 
+```{r}
+library(ggplot2)
+#dfff <- df[51:101, ]
+df_cephalopod <- filter(df, sp_name != 'human', sp_name != 'conserved_cephalopods')
+ggplot(data = df_cephalopod) +
+    geom_point(mapping = aes(x = edits, y = Change, color = sp_name)) 
+```
+
+Observation:
+
+Squid and sepia have more similar number of edits compared to oct_bim and oct_vul because they are just different kinds of octapus.
+
+```{r}
+library(ggplot2)
+ggplot(data = df) +
+    geom_point(mapping = aes(x = edits, y = Change, color = sp_name)) +
+  facet_wrap(~sp_name, ncol=3)
+```
+
+
+## Frequencies in different species
+
+How are the distribution different/similar between different species?
+
+```{r pressure}
+library(ggplot2)
+ggplot(data = df) +
+    geom_point(mapping = aes(x = sp_name, y = frequency, color = Change))
+```
+```{r}
+library(ggplot2)
+ggplot(data = df) +
+geom_boxplot(mapping = aes(x = sp_name, y = frequency, color = sp_name))
+```
+
+First, we notice that KR and synonymous are conserved. We can observe that they have higher frequency in cephalopod species which means that the ratio of radical to conserved in cephalopod species is less than this ratio in humans and conserved_cephalopods. 
+
+Which is exactly the difference in ratios of radical to conserved in all the species from the research:
+
+![Ratio of radical to conserved](a_ratio.png)
+
+
+#Modeling
+
+A part of a RNA that was changed is called an editing site. Here we wanted to see if for any two editing sites, the distance is correlated with the difference of editing levels for the two sites. Distance is the number of nucleotides(letters) between two editing sites and an editing level is The percentage of RNA that is edited.
+![Example of a gene sequence](www/gene.png)
+
+Therefore, for every possible pair of editing sites, their distance and difference in editing level were recorded. 
+
+Data sets consist of three columns: the first column is the gene name, the second column is the distance, the third column is the difference in editing level.
+
+
+```{r, include=F}
+#Reading and tidying the data
+library(dplyr)
+library(readr)
+library(ggplot2)
+
+oct_bim <- read_csv("Data/oct_bim.csv", col_names = c("gene name", "distance", "diff_in_editing_level"))
+oct_vul <- read_csv("Data/oct_vul.csv", col_names = c("gene name", "distance", "diff_in_editing_level"))
+sepia <- read_csv("Data/sepia.csv", col_names = c("gene name", "distance", "diff_in_editing_level"))
+squid <- read_csv("Data/squid.csv", col_names = c("gene name", "distance", "diff_in_editing_level"))
+oct_bim <- mutate(oct_bim, species = 'oct_bim', ID = rownames(oct_bim))
+oct_vul <- mutate(oct_vul, species = 'oct_vul', ID = rownames(oct_vul))
+sepia <- mutate(sepia, species = 'sepia', ID = rownames(sepia))
+squid <- mutate(squid, species = 'squid', ID = rownames(squid))
+ds <- rbind(oct_bim, oct_vul, sepia, squid)
+ds
+#lapply(c(oct_bim, oct_vul, sepia, squid), function(x) {colnames(x) <- c("gene name", "distance", "diff in editing level")})
+#species <- function(x) { x <- mutate(x, species = 'x') }
+#species(oct_vul)
+#oct_bim[4] <- NULL
+
+# library(knitr)
+# library(kableExtra)
+# kable(ds, "html") %>%
+#   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
+#   scroll_box(width = "100%", height = "500px")
+
+```
+
+
+##Distance vs. Difference in editing level
+
+
+```{r}
+options(na.action = na.warn)
+#oct_bim_train <- filter(ds, species == "oct_bim")
+#oct_bim_train <- oct_bim_train[sample(nrow(oct_bim_train), 10000), ]
+#model_oct_bim <- lm(distance ~ diff_in_editing_level, data = oct_bim_train)
+#summary(model_oct_bim)
+
+ggplot1 <- function(x){
+  ggplot(x, mapping = aes(x = distance , y = diff_in_editing_level), alpha = 0.5) + geom_point() +
+  geom_hex(bins=50)
+}
+
+ggplot1(oct_bim)
+ggplot1(oct_vul)
+ggplot1(sepia)
+ggplot1(squid)
+```
+
+Since there are a lot of data points in these graphs, it is difficult to see any correlation, but for octopus vulgaris and octopus bimaculoides, we can see that the bigger the difference in editing level the smaller the distance between editing sites. So, let's look at the part with distance > 5000 and the difference in editing level > 10 so we can see the trend.
+
+```{r}
+oct_vul1 <- filter(oct_vul, distance > 5000, diff_in_editing_level > 10)
+ ggplot(oct_vul, mapping = aes(x = distance , y = diff_in_editing_level), alpha = 0.5) + geom_point() +
+   geom_hex(bins=50)+
+     geom_smooth()
+```
+Or randomly choosing 1500 data points:
+```{r, warning=F}
+oct_vul_train <- oct_vul[sample(nrow(oct_vul), 1500), ]
+ggplot(oct_vul_train, mapping = aes(x = distance , y = diff_in_editing_level), alpha = 0.5) + geom_point() +
+  geom_hex(bins=50) +
+    geom_smooth()
+```
+As distance increases there are less data points and the difference in editing level is smaller.
+
+##Distribution of a distance variable
+
+```{r}
+ggplot(oct_bim, aes(distance))+
+  geom_histogram(bins = 500)+
+  ggtitle("Distance between editing sites in octopus bimaculoides")
+ggplot(oct_vul, aes(distance))+
+  geom_histogram(bins = 500)+
+  ggtitle("Distance between editing sites in octopus vulgaris")
+ggplot(sepia, aes(distance))+
+  geom_histogram(bins = 500)+
+  ggtitle("Distance between editing sites in sepia")
+ggplot(squid, aes(distance))+
+  geom_histogram(bins = 500)+
+  ggtitle("Distance between editing sites in squid")
+```
+
+##Distribution of difference in editing levels
+
+```{r}
+ggplot(oct_bim, aes(diff_in_editing_level))+
+  geom_histogram(bins = 500) +
+  ggtitle("Difference in editing level in octopus bimaculoides")
+ggplot(oct_vul, aes(diff_in_editing_level))+
+  geom_histogram(bins = 500) +
+  ggtitle("Difference in editing level in octopus vulgaris")
+ggplot(sepia, aes(diff_in_editing_level))+
+  geom_histogram(bins = 500) +
+  ggtitle("Difference in editing level in sepia")
+ggplot(squid, aes(diff_in_editing_level))+
+  geom_histogram(bins = 500) +
+  ggtitle("Difference in editing level in squid")
+```
+
+Now it is clear that smaller distance and difference in editing level occur more often than bigger values. Also, from the "Difference in editing level in octopus bimaculoides" histogram we can see that there is a high concentration of data when difference in editing level is around 0, 25/2, and 25 on the "distance vs. diff_in_editing_level in octopus bimaculoides" graph because these values of differences occur just more often.
+
