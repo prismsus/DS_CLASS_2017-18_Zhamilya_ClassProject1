@@ -1,0 +1,138 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+ROC Curve
+Load data
+
+```{r}
+library(tidyverse)
+library(mlbench)
+data(Sonar)
+df <- Sonar
+dim(df)
+```
+```{r}
+table(df$Class)
+head(df)$Class
+```
+```{r}
+df <- as_tibble(df)
+str(head(df[, 1:10]))
+```
+
+#Split data
+```{r}
+library(caret)
+set.seed(998)
+inTraining <- createDataPartition(df$Class, p = .75, list = FALSE)
+training <- df[ inTraining,]
+testing  <- df[-inTraining,]
+table(training$Class)
+```
+
+#Train a model
+```{r}
+fitControl <- trainControl(## 10-fold CV
+                           method = "repeatedcv",
+                           number = 10,
+                           repeats = 5,
+                           
+                           # bellow rows needed if ROC metric is used
+                          classProbs = TRUE,
+                       ## Evaluate performance using 
+                       ## the following function
+                          summaryFunction = twoClassSummary
+                           
+                           )
+```
+
+```{r}
+knnGrid <- expand.grid(k = c(1, 2, 3, 5, 7, 10))
+set.seed(825)
+Fit1 <- train(Class ~ ., data = training, 
+                 method = "knn",
+                 trControl = fitControl, 
+                 tuneGrid = knnGrid,
+                 metric = "ROC"  # Or ROC, Accuracy, or Kappa
+                 # preProcess = c("center", "scale")
+                 )
+Fit1
+```
+
+```{r}
+plot(Fit1)
+```
+```{r}
+confusionMatrix(Fit1)
+```
+
+ROC curve
+#  predict probabilities
+```{r}
+trainPred <- predict(Fit1, training, type = "prob")
+library(pROC)
+rocCurve <- roc(response = training$Class,
+                    predictor = trainPred[, "M"])
+plot(rocCurve, print.thres = "best") # shows "best" cut-off value for p and sens-spec coordinates in parentecies
+```
+
+```{r}
+  # best means highest sum sensitivity + specificity - see ?plot.roc
+rocCurve$auc
+```
+```{r}
+all_p <- tibble(
+  spec = rocCurve$specificities,
+  sens = rocCurve$sensitivities,
+  p = rocCurve$thresholds,
+  sum = spec + sens
+)
+all_p
+```
+```{r}
+#find best cutoff
+best_cutoff <- all_p %>%
+  filter(sum == max(sum)) %>%
+  select(p) %>% unlist
+```
+```{r}
+# plot various cutoffs
+all_p %>%
+  gather(key = "metric", value = "value", -p, -sum) %>%
+  ggplot() +
+  geom_point(aes(x = p, y = value, color = metric)) +
+  geom_line(aes(x = p, y = value, color = metric))  
+
+```
+
+
+Test data
+
+```{r}
+chosen_cutoff <- best_cutoff # or other...
+testPred <- predict(Fit1, testing, type = "prob")
+predicted_values_01 <- testPred %>%
+  mutate(Class = ifelse(M > chosen_cutoff, 1, 0)) %>%
+  select(Class) %>%
+  unlist
+testing_01 <- testing %>%
+  mutate(Class = ifelse(Class == "M", 1, 0)) %>%
+  select(Class) %>% unlist
+SDMTools::accuracy(obs = testing_01, pred = predicted_values_01, threshold = chosen_cutoff)
+SDMTools::confusion.matrix(obs = testing_01, pred = predicted_values_01, threshold = chosen_cutoff)
+```
+
+Other considerations
+read https://topepo.github.io/caret/model-training-and-tuning.html#between-models
+
+among others - Train several models and statistically compare their performance
+
+```{r}
+trellis.par.set(caretTheme())
+```
+```{r}
+densityplot(Fit1, pch = "|")
+```
+

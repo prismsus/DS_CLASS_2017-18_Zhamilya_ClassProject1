@@ -1,0 +1,206 @@
+---
+title: "R Notebook"
+output: html_notebook
+editor_options: 
+  chunk_output_type: inline
+---
+
+                                Homework:
+
+Classification And REgression Training
+
+The train() function
+The core of caret’s functionality is the train() function.
+
+train() is the function that we use to “train” the model. That is, train is the function that will “learn” the relationship between mpg and wt.
+
+When training a model using train(), you only need to tell it a few things:
+– The dataset you’re working with
+– The target variable you’re trying to predict (e.g., the mpg variable)
+– The input variable (e.g., the wt variable)
+– The machine learning method you want to use (in this case “linear regression”)
+
+
+```{r}
+library(ISLR)
+library(caret)
+library(ggplot2)
+model.mtcars_lm <- train(mpg ~ wt     #wt	Weight (1000 lbs)
+                        ,data = mtcars
+                        ,method = "lm"
+                        )
+summary(model.mtcars_lm)
+model.mtcars_lm
+#~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Retrieve coefficients for
+#  - slope
+#  - intercept
+#~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+coef.icept <- coef(model.mtcars_lm$finalModel)[1]
+coef.slope <- coef(model.mtcars_lm$finalModel)[2]
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Plot scatterplot and regression line
+#  using ggplot()
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ggplot(data = mtcars, aes(x = wt, y = mpg)) +
+  geom_point() +
+  geom_abline(slope = coef.slope, intercept = coef.icept, color = "red")
+```
+
+
+                                     Classwork:
+
+
+## Loading data
+
+```{r}
+library(ggplot2)
+mpg
+df <- mpg
+data(df)
+dim(df)
+str(df)
+```
+
+## Exploring data
+
+```{r}
+#plot(df)
+table(df$hwy)
+
+library(ggplot2)
+library(tidyverse)
+#ggplot(df) +
+#  geom_bar(aes(x = Species, fill = Species))
+hist(df$hwy)
+
+sapply(df, function(x) sum(is.na(x))) 
+  
+```
+
+
+## Some info
+
+Now we are splitting the data $A=b_{4} $
+
+$$ \epsilon = \frac{5}{7}$$
+
+
+## Split data
+
+```{r}
+library(caret)
+set.seed(825)
+
+trainIndex <- createDataPartition(df$hwy, p = .8, 
+                                  list = FALSE, 
+                                  times = 1)
+head(trainIndex)
+
+training <- df[ trainIndex,]
+test  <- df[-trainIndex,]
+
+nrow(training)
+```
+
+
+##  Pre-Processing
+
+```{r}
+preProcValues <- preProcess(training, method = c("center", "scale"))
+
+trainTransformed <- predict(preProcValues, training)
+testTransformed <- predict(preProcValues, test)
+
+
+```
+
+## Training
+
+### KNN
+
+```{r}
+fitControl <- trainControl(## 10-fold CV
+                           method = "cv",
+                           number = 10
+                           ## repeated ten times
+                           #repeats = 10
+                           )
+
+KnnGrid <-  expand.grid(k = 1:100)
+
+
+FitKnn <- train(hwy ~ displ + class, data = trainTransformed, 
+                 method = "knn", 
+                 trControl = fitControl,
+                 verbose = FALSE, 
+                 tuneGrid = KnnGrid)
+FitKnn
+summary(FitKnn)
+plot(FitKnn)
+
+
+FitKnn$bestTune
+caret::RMSE(pred = predict(FitKnn, testTransformed), 
+            obs = testTransformed$hwy)
+caret::R2(pred = predict(FitKnn, testTransformed), 
+            obs = testTransformed$hwy)
+
+KnnGrid3 <-  expand.grid(k = 3)
+FitKnn3 <- train(hwy ~ ., data = trainTransformed, 
+                 method = "knn", 
+                 trControl = fitControl,
+                 verbose = FALSE, 
+                 tuneGrid = KnnGrid3)
+caret::R2(pred = predict(FitKnn3, testTransformed), 
+            obs = testTransformed$hwy)
+```
+
+
+```{r}
+
+#KnnGrid <-  expand.grid(k = 1:100)
+ 
+
+
+FitLm <- train(hwy ~ displ + class, data = trainTransformed, 
+                 method = "glm", 
+                 trControl = fitControl
+                 #tuneGrid = KnnGrid
+                )
+FitLm
+summary(FitLm)
+str(FitLm)
+summary(FitLm$finalModel)
+
+FitLm$results$Rsquared
+FitLm$results$RsquaredSD
+
+FitLm$bestTune
+
+caret::R2(pred = predict(FitLm, testTransformed), 
+            obs = testTransformed$hwy)
+
+#plot(FitLm)
+```
+
+
+### Neural Network
+
+```{r}
+Fitnn <- train(hwy ~ ., data = trainTransformed, 
+                 method = "nnet", 
+                 trControl = fitControl
+                 #tuneGrid = KnnGrid
+                )
+Fitnn
+
+caret::R2(pred = predict(Fitnn, testTransformed), 
+            obs = testTransformed$hwy)
+
+```
+
