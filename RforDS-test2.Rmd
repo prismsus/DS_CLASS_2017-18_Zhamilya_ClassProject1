@@ -1,0 +1,67 @@
+1. make a function. User will specify the dataframe and column. 
+Function will return statistical summary as mode, mean, median, and quartiles.
+
+```{r}
+y <- rnorm(1001) #test
+stat <- function(x) {   #dataframe$column
+ mean <- mean(x)
+ median <- median(x)
+ quantile <- quantile(x)
+ mode <- mode(x)
+ print(mean) #average
+ print(median) 
+ print(quantile)
+ print(mode)
+}
+stat(y) #test
+```
+Three examples of use: With this function we can learn about the prices of taxi trips in different cities, or prices of pizza, or I can compare college tution in different states.
+We can not rely only on the mean value beacuse there can be outliers that can increase or decrease it. That is why this function also contains median, mode, the value that occurs most often, and quartiles, divide a list of numbers into quarters, because all of them are not affected by large values.
+
+2. make a function. User will specify the data frame and column to be plotted.
+Function plots histogram and boxplot side by side for numerical values. 
+	IF columns will happen to be categorical, no plot returned. Warning is given to user
+Funcion itself returns an orginal dataframe (to be used in chaining with dplyr)
+Give 3 examples of use (including examples with chaining)
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(magrittr)
+
+hisboxplot <- function(x, y){
+x %>%
+ if  (is.factor(y) == TRUE) {print(x)
+    stop("Variables are not continuous")}
+
+     else { x %>%
+         filter(x, y<400) %>%
+         ggplot(x, mapping = aes(x = y)) + geom_histogram() 
+       ggplot(x, mapping = aes(x = y)) + geom_boxplot() 
+       }
+}
+```
+
+Three examples of use: For example, we may want to know the distribution of the sizes of cylinders in cars, or the distribution of years of manufacture, or the amount of miles cars have driven, but only if less than 400 miles.
+
+
+3. Make a function. User specifies data frame, name for new column, formula for calculation of new column (as a string).
+Please use dplyr to create new column. In order to to this you will have to use the following syntax
+dataframe %>%
+  mutate(rlang::UQ(rlang::sym(new_col) := ...) 
+  For ... you need to combine two funcitons: parse and evaluate. parse(text ="string") will get formula and turn it into an expression.
+  eval will evaluate the expression 
+A lot of info here https://cran.r-project.org/web/packages/dplyr/vignettes/programming.html
+
+
+```{r}
+newcolumn <- function(x, y, z) {
+ library(tidyverse)
+ library(dplyr)
+   x %>%
+     mutate(rlang::UQ(rlang::sym(z)) := eval(parse(text = y)))
+   }
+
+newcolumn(diamonds[1:10], "carat*2", "carat_2")
+```
+

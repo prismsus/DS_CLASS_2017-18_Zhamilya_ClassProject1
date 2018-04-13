@@ -1,0 +1,98 @@
+---
+title: "R Notebook"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+## Task 1
+Imagine you are choosing a ticket to fly _from_ JFK. You want to know which day of the week (Mon, Tue, ...) has lowest delays, and which one largest. How big is the difference? Is it big enough to make you choose one day vs another? 
+
+__Hint__
+use lubridate package. Google "lubridate vignette". Many packages in R have these "vignettes" showing examples and explaining how to use a package. You will have to combine columns. There is a function which will provide you with the weekday number, given the columns with date. Be careful in interpreting a returned result.
+
+```{r}
+library(lubridate)
+library(ggplot2)
+library(nycflights13)
+library(dplyr)
+
+df <- mutate(flights, weekday = wday(time_hour, label = TRUE)) %>%
+filter(origin == "JFK")
+by_day <- group_by(df, weekday) %>%
+summarise(avg = mean(arr_delay, na.rm=TRUE))
+by_day
+diff <-  7.612932 - 1.957202
+
+plot(mtcars)
+
+```
+
+has lowest delays - Sat
+has largest delays - Mon
+the difference is about 5.6 hours
+It is big enough to make me choose Saturday instead of Monday
+
+## Taks 2
+Now choose a particular destination, what can you say now?
+```{r}
+library(ggplot2)
+library(nycflights13)
+library(dplyr)
+
+df <- mutate(flights, weekday = wday(time_hour, label = TRUE)) %>%
+
+filter(origin == "JFK", dest == "BOS")
+
+by_day_bos <- group_by(df, weekday) %>%
+summarise(avg = mean(arr_delay, na.rm=TRUE))
+by_day_bos
+ggplot(data=)
+```
+
+These is no big difference between average arrival delay times on Mon, Tuem Wed, Thur, Fri and Sundays, but on Saturdays, the average arrival delay time is less by almost 4 hours if you fly exactly to Boston.
+```{r}
+library(ggplot2)
+library(nycflights13)
+library(dplyr)
+
+df <- mutate(flights, weekday = wday(time_hour, label = TRUE)) %>%
+filter(origin == "JFK")
+by_day <- group_by(df, weekday) %>%
+summarise(avg = mean(arr_delay, na.rm=TRUE))
+by_day
+
+df <- mutate(flights, weekday = wday(time_hour, label = TRUE)) %>%
+filter(origin == "JFK", dest == "BOS")
+by_day_bos <- group_by(df, weekday) %>%
+summarise(avg1 = mean(arr_delay, na.rm=TRUE))
+by_day_bos
+
+#dd <- mutate(by_day, by_day_bos)
+
+ggplot(data = full_join(by_day, by_day_bos)) + 
+  geom_point(mapping = aes(x = weekday, y = avg), color = "red") +
+  geom_point(mapping = aes(x = weekday , y = avg1))
+  #geom_smooth(mapping = aes(x = , y = ), se = FALSE)
+```
+We can see that the diffrence between average arrival delay time for flights from JFK to any destination and from JFK to Boston is significantly bigger than for other flights. 
+
+
+## Taks 3
+Now for a chosen destination, choose a best carrier-weekday combination. Compare it to the worst one.
+
+```{r}
+library(ggplot2)
+library(nycflights13)
+library(dplyr)
+
+df <- mutate(flights, weekday = wday(time_hour, label = TRUE)) %>%
+
+filter(origin == "JFK", dest == "BOS")
+
+by_day_bos <- group_by(df, weekday, carrier) %>%
+summarise(avg = mean(arr_delay, na.rm=TRUE)) 
+by_day_bos
+```
+Sat	DL	-7.3358209	
+Fri	9E	14.2439024	

@@ -1,0 +1,136 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Data retrieved from: http://archive.ics.uci.edu/ml/datasets/Energy+efficiency#
+
+Data description:
+
+We perform energy analysis using 12 different building shapes simulated in Ecotect. The buildings differ with respect to the glazing area, the glazing area distribution, and the orientation, amongst other parameters. We simulate various settings as functions of the afore-mentioned characteristics to obtain 768 building shapes. The dataset comprises 768 samples and 8 features, aiming to predict two real valued responses. It can also be used as a multi-class classification problem if the response is rounded to the nearest integer.
+
+The dataset contains eight attributes (or features, denoted by X1...X8) and two responses (or outcomes, denoted by y1 and y2). The aim is to use the eight features to predict each of the two responses. 
+
+Specifically: 
+X1	Relative Compactness 
+X2	Surface Area 
+X3	Wall Area 
+X4	Roof Area 
+X5	Overall Height 
+X6	Orientation 
+X7	Glazing Area 
+X8	Glazing Area Distribution 
+y1	Heating Load 
+y2	Cooling Load
+
+```{r}
+library(readxl)
+library(tidyverse)
+library(modelr)
+options(na.action = na.warn)
+
+data_full <- read_excel("/Users/jamilya_bilyalova/Downloads/ENB2012_data.xlsx")
+data_full <- mutate(data_full, ID = rownames(data_full))
+```
+
+2)Separate to train 60% and test set.
+
+```{r}
+train <- data_full[sample(nrow(data_full), 500), ]
+test <- data_full[ !(data_full$ID %in% train$ID), ]
+```
+
+3) Make a linear model to predict Heating Load
+
+```{r}
+model <- lm(Y1~X1+X2+X3+X4+X5+X6+X7+X8, data = train)
+summary(model)
+```
+
+4) Evaluate:
+What can you tell about the model? How reliable it is?
+Which parameters are statistically significant?
+
+
+R-squared is 0.9161 which is close to 1 and p-value is less than 0 which means that the model is reliable.
+From the summary we can see that X4, X6 and X8 are stutistically insignificant, therefore we will only consider other 5 attributes.
+
+
+```{r}
+model1 <- lm(Y1~X1+X2+X3+X5+X7, data = train)
+summary(model1)
+```
+
+@@@@@@@@@@ Which parameters are the most influential?
+
+(The units vary between the different types of variables, which makes it impossible to compare them directly. We have to standardize the regression coefficients so they’re based on the same scale)
+
+The most influential parameters are X3, X5, X7 because t value is the smallest and estimate coefficients are the biggest: 19.002975, 3.785653, 0.069725
+
+```{r}
+plot(model)
+```
+
+look at the pattern of the residuals.
+
+5) New features creation:
+Create new variables like Roof/Wall Area, Volume, etc.
+Do a model now. Evaluate
+
+```{r}
+train <- mutate(train, X9 = X4/X3, X10 = X1/X2, X11 = X1/X5)
+model2 <- lm(Y1~X1+X2+X3+X5+X7+X9+X10+X11, data = train)
+summary(model2)
+```
+
+5b) Evaluate:
+What can you tell about the model? How reliable it is?
+Which parameters are statistically significant?
+Which parameters are the most influential?
+
+The model seems to be more reliable since R-squared increased by 0.180
+All parameters are statistically significant except X1
+
+@@@@@@@@@@@@@ The most influential parameters are X11, X5, X7
+
+6) Interpretation:
+If you increase each of 3 the most important parameters by 1 unit, how much heating load is increasing?
+
+Y1' = Y1 + coefficient of X3 + coefficient of X5 + coefficient of X7 = 19 + 3.78 + 0.07 = Y1 + 22.85
+
+Answer: 22.85
+
+7) Test:
+
+Compare prediction of your model on test set with what actually is in test set. 
+
+You may consider to calculate R2 between predicted and actual values (manual coding of steps to obtain R2 may be needed in this case).
+
+
+
+```{r}
+library(tidyverse)
+library(modelr)
+options(na.action = na.warn)
+model1 <- lm(Y1~X3+X5+X7, data = train)
+ test <- add_predictions(test, model1)
+  
+  
+ggplot(test) + 
+  geom_point(aes(x = X3+X5+X7, y = Y1)) + 
+  geom_point(aes(x = X3+X5+X7, y = pred), colour = "red", size = 1)
+
+ggplot(test) + 
+  geom_point(aes(x = X3+X5+X7, y = Y1)) + 
+  geom_line(aes(x = X3+X5+X7, y = pred), colour = "red", size = 1)
+
+
+rsquare(model1, train)
+rsquare(model1, test)
+```
+
+R2 of train is different from R2 of test by 0.008
+
+
+
+
