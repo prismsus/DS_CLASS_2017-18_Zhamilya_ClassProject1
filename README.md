@@ -1,2 +1,6 @@
-# DS_CLASS_2017-18_Zhamilya_ClassProject1
-classproject - Analyzing the distribution of amino acid changes in humans and cephalopod species in collaboration with a biology research student.
+classproject - Analyzing the distribution of amino acid changes in humans and cephalopod species.
+
+Data taken from this research: Trade-off between Transcriptome Plasticity and Genome Evolution in Cephalopods, Cell 169, 191–202 (2017)
+
+Rpubs: http://rpubs.com/Annn/351188
+
